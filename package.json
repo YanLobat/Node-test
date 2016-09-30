@@ -1,0 +1,32 @@
+{
+  "name": "testtask",
+  "version": "1.0.0",
+  "description": "Simple parser",
+  "main": "server.js",
+  "dependencies": {
+    "eslint": "^3.6.1",
+    "event-stream": "^3.3.4",
+    "express": "^4.14.0",
+    "redis": "^2.6.2",
+    "request": "^2.75.0",
+    "split": "^1.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "npm test",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YanLobat/Node-test.git"
+  },
+  "keywords": [
+    "nodejs"
+  ],
+  "author": "YanLobat",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/YanLobat/Node-test/issues"
+  },
+  "homepage": "https://github.com/YanLobat/Node-test#readme"
+}

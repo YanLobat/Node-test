@@ -12,6 +12,7 @@ const split = require('split');
 const es = require('event-stream');
 const request = require('request');
 const redis = require('redis');
+const YAML = require('yamljs');
 
 const client = redis.createClient({host: "127.0.0.1", port: "6379"});
 
@@ -19,7 +20,7 @@ const client = redis.createClient({host: "127.0.0.1", port: "6379"});
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '3001');
+var port = normalizePort(process.env.PORT || '9000');
 app.set('port', port);
 
 /**
@@ -85,58 +86,77 @@ function onError(error) {
 
 
 class MyTransform extends stream.Transform {
-	constructor() {
+	constructor(id, price, delimetr) {
 		super({readableObjectMode: true, writableObjectMode: true});
 		this.counter = 0;
+		this.id = id;
+		this.price = price;
+		this.delimetr = delimetr;
 	}
 	itemsFilter(row, done) {
-		let obj_item = {
-			pzn: parseInt(row[0]),
-			price: row[1],
-			// name: row[2],
-			// abda_category: row[3],
-			// category: row[4],
-			// categorytree: row[5],
-			// in_stock: row[6]
-		};
-		if (obj_item.pzn && obj_item !== "PZN")
+		let obj_item = {};
+		let pzn = row[this.id];
+		let price = row[this.price];
+		obj_item[pzn] = price;
+		// console.log(row);
+		if (pzn && pzn !== "PZN")
 			this.push(obj_item);
 		return done();
 
 	}
 	_transform(chunk, _, done) {
-		console.log(this.counter++);
-		let itemArray = chunk.split(";");// split the lines on delimiter
-		this.itemsFilter(itemArray, done);//check will it be a new item 
-	}
-}
-class MyWritable extends stream.Writable {
-	constructor() {
-		super({ objectMode: true });
-	}
-	_write(item, _, done) {
-		console.log(item.pzn);
-		client.set(item.pzn, item.price)
-		// items.push(item);
-		done();
-	}
-	end() {
-		client.get("274364",function(err, reply) {
-		    // reply is null when the key is missing
-		    console.log(reply);
-		});
+		let itemArray = chunk.split(this.delimetr);// split the lines on delimiter
+		// console.log(this.delimetr)
+		this.itemsFilter(itemArray, done);//check will it be a new item 		
 	}
 }
 
-let transformer = new MyTransform();
-let bulker = new MyWritable();
-request('http://www.apodiscounter.de/partnerprogramme/krn.csv')
-.pipe(split())
-.pipe(transformer)
-.pipe(bulker)
-.on('error', function(){
-	console.log('Error while reading file.');
-})
-.on('end', function(){
-	console.log('Read entire file.')
+class MyWritable extends stream.Writable {
+	constructor(shopname) {
+		super({ objectMode: true });
+		this.shopname = shopname;
+	}
+	_write(item, _, done) {
+		let key = this.shopname+Object.keys(item)[0];
+		if (key === undefined)
+			console.log(item);
+		client.hmset(key, item, (err, reply) => {
+			// console.log(reply);
+		});
+		done();
+	}
+}
+
+const shops = YAML.load("config.yml");
+for (let i = 0; i < shops.length; i++){
+	let url = Object.keys(shops[i])[0];
+	let id = shops[i][url]["product_id_column"];
+	let shopname = shops[i][url]["shopname"];
+	let price = shops[i][url]["price_column"];
+	let delimetr = shops[i][url]["delimetr"];
+
+	parseShop(url, shopname, id, price, delimetr);
+}
+function parseShop(url, shopname, id, price, delimetr) {
+	let transformer = new MyTransform(id, price, delimetr);
+	let bulker = new MyWritable(shopname);
+	request(url)
+	.pipe(split())
+	.pipe(transformer)
+	.pipe(bulker)
+	.on('error', function(){
+		console.log('Error while reading file.');
+	})
+	.on('end', function(){
+		console.log('Read entire file.')
+	});	
+}
+
+app.get("/", (req, res) => {
+	let key = req.query.shop+req.query.product_id;
+	console.log(key);
+	client.hgetall(key, (err, reply) => {
+		console.log(reply);
+		return res.send(reply);
+	});
 });

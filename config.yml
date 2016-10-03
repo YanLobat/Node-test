@@ -1,10 +1,4 @@
-- http://www.apodiscounter.de/partnerprogramme/krn.csv:
-   shopname: apodiscounter
-   delimetr: ;
-   product_id_column: 0
-   price_column: 1
-- http://preisexporte.apobyte.de/www.eurapon.de/preissuchmaschine/preissuchmaschine.csv:
-   shopname: eurapon
-   delimetr: "\t"
-   product_id_column: 0
-   price_column: 3
+host: 127.0.0.1
+port: 9000
+DBport: 6379
+shopsFile: shops.yml

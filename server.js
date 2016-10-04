@@ -1,5 +1,3 @@
-/*eslint no-process-env: "error"*/
-
 'use strict';
 
 const express = require('express');
